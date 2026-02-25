@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badminton Review</title>
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script>
+        function goUser() {
+            window.location.href = "user_review.html";
+        }
+
+        function showAdminLogin() {
+            window.location.href = "admin_login.html";
+        }
+    </script>
+    <style>
+        body{
+            font-family:'Poppins',sans-serif;
+            background:linear-gradient(135deg,#00c853,#00b0ff);
+            background-size:200% 200%;
+            animation:bgMove 12s ease infinite alternate;
+        }
+
+        @keyframes bgMove{
+            0%{background-position:left top;}
+            100%{background-position:right bottom;}
+        }
+
+        .fade-in{
+            animation:fadeUp 0.9s ease forwards;
+            opacity:0;
+            transform:translateY(30px);
+        }
+
+        @keyframes fadeUp{
+            to{opacity:1;transform:translateY(0);}
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-slate-50 flex items-center justify-center">
+
+<div class="w-full max-w-xl bg-white rounded-3xl shadow-xl p-12 text-center">
+
+    <div class="mb-8">
+        <div class="w-16 h-16 mx-auto bg-gradient-to-r from-emerald-400 to-blue-500 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
+            🏸
+        </div>
+
+        <h1 class="text-3xl font-semibold mt-6 text-slate-800">
+            Badminton Review System
+        </h1>
+
+        <p class="text-slate-500 mt-2">
+            Choose your access level
+        </p>
+    </div>
+
+    <div class="space-y-4">
+        <a href="user_review.html"
+           class="block w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-medium transition shadow-md hover:shadow-lg">
+            Continue as Player
+        </a>
+
+        <a href="admin_login.html"
+           class="block w-full py-3 rounded-xl border border-slate-300 hover:bg-slate-100 font-medium transition">
+            Administrator Login
+        </a>
+    </div>
+
+</div>
+
+</body>
+</html>

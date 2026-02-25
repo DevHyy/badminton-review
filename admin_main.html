@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <script>
+        const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+        if (!currentUser || currentUser.role !== "admin") {
+            window.location.replace("admin_login.html");
+        }
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Review Dashboard</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen flex">
+
+<!-- SIDEBAR -->
+<div class="w-64 bg-white border-r shadow-sm flex flex-col justify-between">
+    <div>
+        <div class="p-6 border-b">
+            <h1 class="text-lg font-semibold">Admin Panel</h1>
+            <p class="text-xs text-slate-500 mt-1">Review Moderation</p>
+        </div>
+
+        <div class="p-6 space-y-3">
+            <button onclick="clearAllData()"
+                    class="w-full py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition">
+                Clear All Data
+            </button>
+        </div>
+    </div>
+
+    <div class="p-6 border-t">
+        <button onclick="logout()"
+                class="w-full py-2 text-sm bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition">
+            Logout
+        </button>
+    </div>
+</div>
+
+<!-- MAIN -->
+<div class="flex-1 p-10">
+
+    <h2 class="text-2xl font-semibold mb-8">Review Dashboard</h2>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-10">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border text-center">
+            <div class="text-sm text-slate-500">Pending</div>
+            <div id="pendingCount" class="text-3xl font-semibold mt-2 text-amber-500">0</div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border text-center">
+            <div class="text-sm text-slate-500">Approved</div>
+            <div id="approvedCount" class="text-3xl font-semibold mt-2 text-emerald-500">0</div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border text-center">
+            <div class="text-sm text-slate-500">Cancelled</div>
+            <div id="cancelledCount" class="text-3xl font-semibold mt-2 text-red-500">0</div>
+        </div>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-2xl p-6 shadow-sm border">
+            <h3 class="font-semibold mb-4">Pending</h3>
+            <div id="pendingList" class="space-y-4"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-6 shadow-sm border">
+            <h3 class="font-semibold mb-4">Approved</h3>
+            <div id="approvedList" class="space-y-4"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-6 shadow-sm border">
+            <h3 class="font-semibold mb-4">Cancelled</h3>
+            <div id="cancelledList" class="space-y-4"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- IMAGE MODAL -->
+<div id="imageModal"
+     class="fixed inset-0 bg-black bg-opacity-90 hidden flex items-center justify-center z-50"
+     onclick="outsideClick(event)">
+
+    <button onclick="closeModal()"
+            class="absolute top-6 right-8 text-white text-4xl">✕</button>
+
+    <button onclick="prevImage()"
+            class="absolute left-6 text-white text-4xl">❮</button>
+
+    <img id="modalImage"
+         class="max-h-[85%] max-w-[90%] rounded-2xl shadow-2xl">
+
+    <button onclick="nextImage()"
+            class="absolute right-6 text-white text-4xl">❯</button>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div id="confirmModal"
+     class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center z-50">
+
+    <div class="bg-white w-[400px] rounded-2xl shadow-xl p-6">
+        <h3 class="text-lg font-semibold mb-3">Confirm Delete</h3>
+        <p class="text-sm text-slate-600 mb-6">
+            Are you sure you want to delete this review?
+        </p>
+
+        <div class="flex justify-end gap-3">
+            <button onclick="closeConfirm()"
+                    class="px-4 py-2 text-sm bg-slate-200 rounded-lg hover:bg-slate-300 transition">
+                Cancel
+            </button>
+
+            <button id="confirmDeleteBtn"
+                    class="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition">
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    /* STORAGE */
+
+    function getStorage(){
+        let storage = JSON.parse(localStorage.getItem("reviews")) || {};
+        storage.pending = storage.pending || { san:[], host:[], shop:[] };
+        storage.approved = storage.approved || { san:[], host:[], shop:[] };
+        storage.cancelled = storage.cancelled || { san:[], host:[], shop:[] };
+        return storage;
+    }
+
+    function saveStorage(data){
+        localStorage.setItem("reviews", JSON.stringify(data));
+    }
+
+    /* RENDER */
+
+    function renderDashboard(){
+
+        const storage = getStorage();
+
+        pendingList.innerHTML="";
+        approvedList.innerHTML="";
+        cancelledList.innerHTML="";
+
+        let pendingCount=0, approvedCount=0, cancelledCount=0;
+
+        ["san","host","shop"].forEach(type=>{
+
+            storage.pending[type].forEach((r,index)=>{
+                pendingCount++;
+                pendingList.innerHTML += cardTemplate(r,type,index,"pending");
+            });
+
+            storage.approved[type].forEach((r,index)=>{
+                approvedCount++;
+                approvedList.innerHTML += cardTemplate(r,type,index,"approved");
+            });
+
+            storage.cancelled[type].forEach((r,index)=>{
+                cancelledCount++;
+                cancelledList.innerHTML += cardTemplate(r,type,index,"cancelled");
+            });
+
+        });
+
+        pendingCountEl.innerText=pendingCount;
+        approvedCountEl.innerText=approvedCount;
+        cancelledCountEl.innerText=cancelledCount;
+    }
+
+    const pendingList = document.getElementById("pendingList");
+    const approvedList = document.getElementById("approvedList");
+    const cancelledList = document.getElementById("cancelledList");
+    const pendingCountEl = document.getElementById("pendingCount");
+    const approvedCountEl = document.getElementById("approvedCount");
+    const cancelledCountEl = document.getElementById("cancelledCount");
+
+    /* CARD */
+
+    function cardTemplate(r,type,index,status){
+
+        let buttons = "";
+
+        if(status==="pending"){
+            buttons=`
+<div class="mt-4 flex gap-2">
+<button onclick="approveReview('${type}',${index})"
+class="flex-1 py-2 text-xs bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition">
+Approve</button>
+<button onclick="cancelReview('${type}',${index})"
+class="flex-1 py-2 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 transition">
+Cancel</button>
+</div>`;
+        }
+
+        if(status==="approved"){
+            buttons=`
+<div class="mt-4">
+<button onclick="askDelete('${type}',${index})"
+class="w-full py-2 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 transition">
+Delete</button>
+</div>`;
+        }
+
+        let imagesHTML="";
+        if(r.images && r.images.length>0){
+            imagesHTML=`
+<div class="flex gap-2 mt-3 flex-wrap">
+${r.images.map((img,i)=>
+                `<img src="${img}"
+data-type="${type}"
+data-status="${status}"
+data-index="${index}"
+data-imgindex="${i}"
+onclick="openImageFromCard(this)"
+class="w-20 h-20 object-cover rounded-lg border cursor-pointer hover:scale-105 transition">`
+            ).join("")}
+</div>`;
+        }
+
+        return `
+<div class="border rounded-xl p-4 bg-slate-50 hover:shadow-md transition">
+<div class="font-semibold">${r.title}</div>
+<div class="text-sm text-slate-500">${r.name}</div>
+<div class="text-sm mt-1 font-medium">Rating: ${r.rating}/10</div>
+<p class="mt-2 text-sm">${r.content}</p>
+${imagesHTML}
+${buttons}
+</div>`;
+    }
+
+    /* APPROVE / CANCEL */
+
+    function approveReview(type,index){
+        const storage=getStorage();
+        const review=storage.pending[type][index];
+        storage.pending[type].splice(index,1);
+        storage.approved[type].push(review);
+        saveStorage(storage);
+        renderDashboard();
+    }
+
+    function cancelReview(type,index){
+        const storage=getStorage();
+        const review=storage.pending[type][index];
+        storage.pending[type].splice(index,1);
+        storage.cancelled[type].push(review);
+        saveStorage(storage);
+        renderDashboard();
+    }
+
+    /* DELETE CONFIRM */
+
+    let deleteTarget=null;
+
+    function askDelete(type,index){
+        deleteTarget={type,index};
+        document.getElementById("confirmModal").classList.remove("hidden");
+        document.getElementById("confirmDeleteBtn").onclick=confirmDelete;
+    }
+
+    function confirmDelete(){
+        if(!deleteTarget) return;
+        const storage=getStorage();
+        storage.approved[deleteTarget.type].splice(deleteTarget.index,1);
+        saveStorage(storage);
+        closeConfirm();
+        renderDashboard();
+    }
+
+    function closeConfirm(){
+        document.getElementById("confirmModal").classList.add("hidden");
+        deleteTarget=null;
+    }
+
+    /* IMAGE MODAL */
+
+    let currentImages=[];
+    let currentIndex=0;
+
+    function openImageFromCard(el){
+
+        const type=el.dataset.type;
+        const status=el.dataset.status;
+        const index=parseInt(el.dataset.index);
+        const imgIndex=parseInt(el.dataset.imgindex);
+
+        const storage=getStorage();
+        let review;
+
+        if(status==="pending") review=storage.pending[type][index];
+        else if(status==="approved") review=storage.approved[type][index];
+        else review=storage.cancelled[type][index];
+
+        if(!review || !review.images) return;
+
+        currentImages=review.images;
+        currentIndex=imgIndex;
+
+        modalImage.src=currentImages[currentIndex];
+        imageModal.classList.remove("hidden");
+    }
+
+    function closeModal(){ imageModal.classList.add("hidden"); }
+    function nextImage(){
+        if(!currentImages.length) return;
+        currentIndex=(currentIndex+1)%currentImages.length;
+        modalImage.src=currentImages[currentIndex];
+    }
+    function prevImage(){
+        if(!currentImages.length) return;
+        currentIndex=(currentIndex-1+currentImages.length)%currentImages.length;
+        modalImage.src=currentImages[currentIndex];
+    }
+    function outsideClick(e){
+        if(e.target.id==="imageModal") closeModal();
+    }
+
+    /* OTHER */
+
+    function clearAllData(){
+        if(confirm("Clear ALL reviews?")){
+            localStorage.removeItem("reviews");
+            renderDashboard();
+        }
+    }
+
+    function logout(){
+        localStorage.removeItem("currentUser");
+        location.reload();
+    }
+
+    document.addEventListener("keydown", e=>{
+        if(e.key==="Escape") closeModal();
+        if(e.key==="ArrowRight") nextImage();
+        if(e.key==="ArrowLeft") prevImage();
+    });
+
+    renderDashboard();
+
+</script>
+</body>
+</html>
