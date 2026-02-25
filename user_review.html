@@ -433,51 +433,44 @@ class="w-28 h-28 object-cover rounded-xl cursor-pointer hover:scale-105 transiti
 
     async function saveReviewToStorage() {
 
-        const {userName, reviewType, reviewTitle, ratingValue, reviewContent, files} = window.tempReviewData;
+        try {
 
-        let storage = JSON.parse(localStorage.getItem("reviews")) || {};
+            const {userName, reviewType, reviewTitle, ratingValue, reviewContent, files} = window.tempReviewData;
 
-        storage.pending = storage.pending || {san:[],host:[],shop:[]};
-        storage.approved = storage.approved || {san:[],host:[],shop:[]};
-        storage.cancelled = storage.cancelled || {san:[],host:[],shop:[]};
+            let imageArray = [];
 
-        let imageArray = [];
-
-        if (files.length > 0) {
-
-            for (let i = 0; i < files.length; i++) {
-                const compressed = await compressImage(files[i], 800, 0.6);
-                imageArray.push(compressed);
+            if (files.length > 0) {
+                for (let i = 0; i < files.length; i++) {
+                    const compressed = await compressImage(files[i], 800, 0.6);
+                    imageArray.push(compressed);
+                }
             }
+
+            if (!window.db) {
+                console.error("Firebase chưa load xong");
+                return;
+            }
+
+            const { collection, addDoc } = await import(
+                "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+                );
+
+            await addDoc(collection(window.db, "reviews"), {
+                name: userName,
+                type: reviewType,
+                title: reviewTitle,
+                rating: ratingValue,
+                content: reviewContent,
+                images: imageArray,
+                status: "pending",
+                createdAt: new Date()
+            });
+
+            console.log("🔥 Saved to Firestore");
+
+        } catch (error) {
+            console.error("Lỗi khi lưu Firestore:", error);
         }
-
-        storage.pending[reviewType].push({
-            name: userName,
-            title: reviewTitle,
-            rating: ratingValue,
-            content: reviewContent,
-            images: imageArray,
-            date: new Date().toLocaleString()
-        });
-
-        await window.addDoc(window.collection(window.db, "reviews"), {
-            name: userName,
-            type: reviewType,
-            title: reviewTitle,
-            rating: ratingValue,
-            content: reviewContent,
-            images: imageArray,
-            status: "pending",
-            createdAt: new Date()
-        });
-
-        // reset form
-        document.getElementById("name").value = "";
-        document.getElementById("title").value = "";
-        document.getElementById("rating").value = "";
-        document.getElementById("content").value = "";
-        document.getElementById("imageInput").value = "";
-        document.getElementById("imagePreview").innerHTML = "";
     }
 </script>
 <script type="module">
