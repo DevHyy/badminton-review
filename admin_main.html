@@ -350,5 +350,163 @@ ${buttons}
     renderDashboard();
 
 </script>
+<script type="module">
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+        getFirestore,
+        collection,
+        getDocs,
+        updateDoc,
+        deleteDoc,
+        doc
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    /* FIREBASE CONFIG */
+    const firebaseConfig = {
+        apiKey: "AIzaSyAYnwLTROi60XU4H5AVwrRceHx-khUz_KY",
+        authDomain: "badminton-review.firebaseapp.com",
+        projectId: "badminton-review",
+        storageBucket: "badminton-review.firebasestorage.app",
+        messagingSenderId: "881736513353",
+        appId: "1:881736513353:web:844f8afd61e43270298c98"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    /* DOM */
+    const pendingList = document.getElementById("pendingList");
+    const approvedList = document.getElementById("approvedList");
+    const cancelledList = document.getElementById("cancelledList");
+
+    const pendingCountEl = document.getElementById("pendingCount");
+    const approvedCountEl = document.getElementById("approvedCount");
+    const cancelledCountEl = document.getElementById("cancelledCount");
+
+    /* LOAD REVIEWS */
+
+    async function loadReviews() {
+
+        pendingList.innerHTML = "";
+        approvedList.innerHTML = "";
+        cancelledList.innerHTML = "";
+
+        let pending = 0, approved = 0, cancelled = 0;
+
+        const querySnapshot = await getDocs(collection(db, "reviews"));
+
+        querySnapshot.forEach((docSnap) => {
+
+            const r = docSnap.data();
+            const id = docSnap.id;
+
+            const card = cardTemplate(r, id);
+
+            if (r.status === "pending") {
+                pendingList.innerHTML += card;
+                pending++;
+            }
+            else if (r.status === "approved") {
+                approvedList.innerHTML += card;
+                approved++;
+            }
+            else {
+                cancelledList.innerHTML += card;
+                cancelled++;
+            }
+        });
+
+        pendingCountEl.innerText = pending;
+        approvedCountEl.innerText = approved;
+        cancelledCountEl.innerText = cancelled;
+    }
+
+    /* CARD TEMPLATE */
+
+    function cardTemplate(r, id) {
+
+        let buttons = "";
+
+        if (r.status === "pending") {
+            buttons = `
+      <div class="mt-4 flex gap-2">
+        <button onclick="approveReview('${id}')"
+        class="flex-1 py-2 text-xs bg-emerald-500 text-white rounded-lg hover:bg-emerald-600">
+          Approve
+        </button>
+        <button onclick="cancelReview('${id}')"
+        class="flex-1 py-2 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600">
+          Cancel
+        </button>
+      </div>`;
+        }
+
+        if (r.status === "approved") {
+            buttons = `
+      <div class="mt-4">
+        <button onclick="deleteReview('${id}')"
+        class="w-full py-2 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600">
+          Delete
+        </button>
+      </div>`;
+        }
+
+        return `
+  <div class="border rounded-xl p-4 bg-slate-50">
+    <div class="font-semibold">${r.title}</div>
+    <div class="text-sm text-slate-500">${r.name}</div>
+    <div class="text-sm mt-1 font-medium">Rating: ${r.rating}/10</div>
+    <p class="mt-2 text-sm">${r.content}</p>
+    ${buttons}
+  </div>`;
+    }
+
+    /* ACTIONS */
+
+    window.approveReview = async function(id) {
+        await updateDoc(doc(db, "reviews", id), {
+            status: "approved"
+        });
+        loadReviews();
+    }
+
+    window.cancelReview = async function(id) {
+        await updateDoc(doc(db, "reviews", id), {
+            status: "cancelled"
+        });
+        loadReviews();
+    }
+
+    window.deleteReview = async function(id) {
+        if (!confirm("Delete review permanently?")) return;
+        await deleteDoc(doc(db, "reviews", id));
+        loadReviews();
+    }
+
+    /* CLEAR ALL */
+
+    window.clearAllData = async function() {
+        if (!confirm("Clear ALL reviews?")) return;
+
+        const querySnapshot = await getDocs(collection(db, "reviews"));
+        for (const d of querySnapshot.docs) {
+            await deleteDoc(doc(db, "reviews", d.id));
+        }
+
+        loadReviews();
+    }
+
+    /* LOGOUT */
+
+    window.logout = function() {
+        localStorage.removeItem("currentUser");
+        location.reload();
+    }
+
+    /* INIT */
+    loadReviews();
+
+</script>
 </body>
 </html>

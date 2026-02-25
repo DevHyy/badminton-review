@@ -460,7 +460,16 @@ class="w-28 h-28 object-cover rounded-xl cursor-pointer hover:scale-105 transiti
             date: new Date().toLocaleString()
         });
 
-        localStorage.setItem("reviews", JSON.stringify(storage));
+        await window.addDoc(window.collection(window.db, "reviews"), {
+            name: userName,
+            type: reviewType,
+            title: reviewTitle,
+            rating: ratingValue,
+            content: reviewContent,
+            images: imageArray,
+            status: "pending",
+            createdAt: new Date()
+        });
 
         // reset form
         document.getElementById("name").value = "";
@@ -471,6 +480,26 @@ class="w-28 h-28 object-cover rounded-xl cursor-pointer hover:scale-105 transiti
         document.getElementById("imagePreview").innerHTML = "";
     }
 </script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    const firebaseConfig = {
+        apiKey: "AIzaSyAYnwLTROi60XU4H5AVwrRceHx-khUz_KY",
+        authDomain: "badminton-review.firebaseapp.com",
+        projectId: "badminton-review",
+        storageBucket: "badminton-review.firebasestorage.app",
+        messagingSenderId: "881736513353",
+        appId: "1:881736513353:web:844f8afd61e43270298c98",
+        measurementId: "G-M9ZMXEQ9H5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.db = db;
+    window.addDoc = addDoc;
+    window.collection = collection;
+</script>
 </body>
 </html>
